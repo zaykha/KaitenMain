@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { ThemeProvider } from "styled-components";
+import { DefaultTheme, ThemeProvider } from "styled-components";
 import { darkTheme, GlobalStyle, lightTheme } from "./theme";
 import { getDictionary, Language } from "./i18n";
 
@@ -82,7 +82,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeToggleContext.Provider value={contextValue}>
       <LanguageContext.Provider value={{ language, setLanguage, t }}>
-        <ThemeProvider theme={theme}>
+        <ThemeProvider theme={theme as DefaultTheme}>
           <GlobalStyle />
           {children}
         </ThemeProvider>
