@@ -1430,12 +1430,12 @@ const overrides: Record<Language, Dictionary> = {
 };
 
 export const LANGUAGES: { code: Language; label: string }[] = [
-  { code: "en", label: "EN" },
-  { code: "hi", label: "HI" },
-  { code: "ja", label: "JA" },
-  { code: "my", label: "MY" },
-  { code: "vn", label: "VN" },
-  { code: "zh", label: "ZH" }
+  { code: "en", label: "English" },
+  { code: "hi", label: "हिन्दी" },
+  { code: "ja", label: "日本語" },
+  { code: "my", label: "မြန်မာ" },
+  { code: "vn", label: "Tiếng Việt" },
+  { code: "zh", label: "中文" }
 ];
 
 export const dictionary: Record<Language, Dictionary> = {
