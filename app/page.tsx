@@ -1,29 +1,33 @@
 "use client";
 
 import Image from "next/image";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import styled, { css } from "styled-components";
 import {
+  Building2,
+  CalendarDays,
   Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Facebook,
-  ExternalLink,
   Globe,
   Mail,
   MapPin,
   Moon,
+  Package,
   Phone,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
   Sparkles,
-  SunMedium
+  SunMedium,
+  Truck,
+  Wrench
 } from "lucide-react";
 import { LanguageContext, ThemeToggleContext } from "./providers";
 import { LANGUAGES } from "./i18n";
-
-const ROUTES = {
-  mart: "https://kaiten-mart.vercel.app/",
-  living: "https://kaiten-living.vercel.app/",
-  homecare: "https://kaiten-homecare.vercel.app/"
-};
 
 function trackClick(label: string) {
   // Placeholder analytics hook
@@ -34,6 +38,77 @@ export default function Page() {
   const { themeName, toggleTheme } = useContext(ThemeToggleContext);
   const { language, setLanguage, t } = useContext(LanguageContext);
   const [showToast, setShowToast] = useState(false);
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
+  const [isHeroPaused, setIsHeroPaused] = useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const languageMenuRef = useRef<HTMLDivElement>(null);
+
+  const heroBusinesses = [
+    {
+      key: "mart",
+      logo: "/KTMartIsometric.png",
+      features: [
+        { icon: ShoppingBag, label: "bullet1" },
+        { icon: Search, label: "bullet2" },
+        { icon: MapPin, label: "bullet3" },
+        { icon: Package, label: "chip1" }
+      ]
+    },
+    {
+      key: "living",
+      logo: "/KTLivingIsometric.png",
+      features: [
+        { icon: Building2, label: "bullet1" },
+        { icon: CalendarDays, label: "bullet2" },
+        { icon: ShieldCheck, label: "bullet3" },
+        { icon: Search, label: "chip1" }
+      ]
+    },
+    {
+      key: "homecare",
+      logo: "/KTHCIsometric.png",
+      features: [
+        { icon: Wrench, label: "chip1" },
+        { icon: Truck, label: "chip2" },
+        { icon: Sparkles, label: "chip3" },
+        { icon: ShieldCheck, label: "bullet1" }
+      ]
+    }
+  ] as const;
+
+  useEffect(() => {
+    if (isHeroPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const rotation = window.setInterval(() => {
+      setActiveHeroSlide((current) => (current + 1) % heroBusinesses.length);
+    }, 5000);
+
+    return () => window.clearInterval(rotation);
+  }, [isHeroPaused, heroBusinesses.length]);
+
+  useEffect(() => {
+    if (!isLanguageOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!languageMenuRef.current?.contains(event.target as Node)) {
+        setIsLanguageOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsLanguageOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isLanguageOpen]);
 
   useEffect(() => {
     const elements = Array.from(
@@ -89,7 +164,7 @@ export default function Page() {
               height={28}
               priority
             />
-            <BrandWordmark>Kaiten</BrandWordmark>
+            <BrandWordmark>{t("brand.name")}</BrandWordmark>
           </Brand>
           <TopActions>
             <IconToggle
@@ -103,183 +178,164 @@ export default function Page() {
             >
               {themeName === "light" ? <SunMedium size={18} /> : <Moon size={18} />}
             </IconToggle>
-            <LanguageSelectWrap>
-              <Globe size={16} />
-              <LanguageSelect
+            <LanguageMenu ref={languageMenuRef}>
+              <LanguageButton
+                type="button"
                 aria-label={t("nav.language")}
-                value={language}
-                onChange={(event) => {
-                  setLanguage(event.target.value as typeof language);
-                  trackClick("language-toggle");
-                }}
+                aria-haspopup="listbox"
+                aria-expanded={isLanguageOpen}
+                onClick={() => setIsLanguageOpen((open) => !open)}
               >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.label}
-                  </option>
-                ))}
-              </LanguageSelect>
-            </LanguageSelectWrap>
+                <Globe size={17} />
+                <span>{LANGUAGES.find((lang) => lang.code === language)?.label}</span>
+                <ChevronDown size={16} aria-hidden="true" />
+              </LanguageButton>
+              {isLanguageOpen && (
+                <LanguagePopover role="listbox" aria-label={t("nav.language")}>
+                  {LANGUAGES.map((lang) => (
+                    <LanguageOption
+                      key={lang.code}
+                      type="button"
+                      role="option"
+                      aria-selected={language === lang.code}
+                      $active={language === lang.code}
+                      onClick={() => {
+                        setLanguage(lang.code);
+                        setIsLanguageOpen(false);
+                        trackClick(`language-${lang.code}`);
+                      }}
+                    >
+                      <LanguageCode>{lang.code}</LanguageCode>
+                      <span>{lang.label}</span>
+                      {language === lang.code && <Check size={16} />}
+                    </LanguageOption>
+                  ))}
+                </LanguagePopover>
+              )}
+            </LanguageMenu>
           </TopActions>
         </TopBarInner>
       </TopBar>
 
       <Main id="top">
-        <HeroSection data-animate>
-          <Container>
-            <HeroGrid>
-              <div>
-                <Eyebrow>{t("landing.heroEyebrow")}</Eyebrow>
-                <HeroTitle>{t("landing.heroTitle")}</HeroTitle>
-                <HeroCopy>
-                  {t("landing.heroCopy")}
-                </HeroCopy>
-              </div>
-              <HeroStack>
-              <HeroCardLink
-                $offset="front"
-                data-front="true"
-                href={ROUTES.mart}
-                onClick={() => trackClick("mart-hero-card")}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <HeroCard>
-                  <HeroCardOverlay className="hero-overlay" />
-                  <HeroCardCorner className="hero-corner">
-                    <ExternalLink size={16} />
-                    <HeroCornerLogo src="/KTMartIsometric.png" alt="Kaiten Mart" />
-                  </HeroCardCorner>
-                  <HeroCardPreview>
-                    <HeroCardImage
-                      src="/KTMartPreview.png"
-                        alt="Kaiten Mart preview"
-                      />
-                    </HeroCardPreview>
-                    <HeroCardBody>
-                      <HeroCardTitle>
-                        <span>{t("landing.mart.title")}</span>
-                        <HeroCardPill>{t("landing.mart.pill")}</HeroCardPill>
-                      </HeroCardTitle>
-                      <HeroCardText>{t("landing.mart.desc")}</HeroCardText>
-                      <HeroCardList>
-                        <li>{t("landing.mart.bullet1")}</li>
-                        <li>{t("landing.mart.bullet2")}</li>
-                        <li>{t("landing.mart.bullet3")}</li>
-                      </HeroCardList>
-                      <HeroCardChips>
-                        <span>{t("landing.mart.chip1")}</span>
-                        <span>{t("landing.mart.chip2")}</span>
-                        <span>{t("landing.mart.chip3")}</span>
-                      </HeroCardChips>
-                    </HeroCardBody>
-                  </HeroCard>
-                </HeroCardLink>
-              <HeroCardLink
-                $offset="mid"
-                href={ROUTES.living}
-                onClick={() => trackClick("living-hero-card")}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <HeroCard>
-                  <HeroCardOverlay className="hero-overlay" />
-                  <HeroCardCorner className="hero-corner">
-                    <ExternalLink size={16} />
-                    <HeroCornerLogo src="/KTLivingIsometric.png" alt="Kaiten Living" />
-                  </HeroCardCorner>
-                  <HeroCardPreview>
-                    <HeroCardImage
-                      src="/KTLivingPreview.png"
-                        alt="Kaiten Living preview"
-                      />
-                    </HeroCardPreview>
-                    <HeroCardBody>
-                      <HeroCardTitle>
-                        <span>{t("landing.living.title")}</span>
-                        <HeroCardPill>{t("landing.living.pill")}</HeroCardPill>
-                      </HeroCardTitle>
-                      <HeroCardText>{t("landing.living.desc")}</HeroCardText>
-                      <HeroCardList>
-                        <li>{t("landing.living.bullet1")}</li>
-                        <li>{t("landing.living.bullet2")}</li>
-                        <li>{t("landing.living.bullet3")}</li>
-                      </HeroCardList>
-                      <HeroCardChips>
-                        <span>{t("landing.living.chip1")}</span>
-                        <span>{t("landing.living.chip2")}</span>
-                      </HeroCardChips>
-                    </HeroCardBody>
-                  </HeroCard>
-                </HeroCardLink>
-              <HeroCardLink
-                $offset="back"
-                href={ROUTES.homecare}
-                onClick={() => trackClick("homecare-hero-card")}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <HeroCard>
-                  <HeroCardOverlay className="hero-overlay" />
-                  <HeroCardCorner className="hero-corner">
-                    <ExternalLink size={16} />
-                    <HeroCornerLogo src="/KTHCIsometric.png" alt="Kaiten HomeCare" />
-                  </HeroCardCorner>
-                  <HeroCardPreview>
-                    <HeroCardImage
-                      src="/KTHomeCarePreview.png"
-                        alt="Kaiten HomeCare preview"
-                      />
-                    </HeroCardPreview>
-                    <HeroCardBody>
-                      <HeroCardTitle>
-                        <span>{t("landing.homecare.title")}</span>
-                        <HeroCardPill>{t("landing.homecare.pill")}</HeroCardPill>
-                      </HeroCardTitle>
-                      <HeroCardText>{t("landing.homecare.desc")}</HeroCardText>
-                      <HeroCardList>
-                        <li>{t("landing.homecare.bullet1")}</li>
-                        <li>{t("landing.homecare.bullet2")}</li>
-                        <li>{t("landing.homecare.bullet3")}</li>
-                      </HeroCardList>
-                      <HeroCardChips>
-                        <span>{t("landing.homecare.chip1")}</span>
-                        <span>{t("landing.homecare.chip2")}</span>
-                        <span>{t("landing.homecare.chip3")}</span>
-                      </HeroCardChips>
-                    </HeroCardBody>
-                  </HeroCard>
-                </HeroCardLink>
-              </HeroStack>
-            </HeroGrid>
-          </Container>
-        </HeroSection>
+        <HeroSection id="businesses">
+          <HeroCarousel
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Kaiten businesses"
+            onMouseEnter={() => setIsHeroPaused(true)}
+            onMouseLeave={(event) => {
+              if (!event.currentTarget.contains(document.activeElement)) {
+                setIsHeroPaused(false);
+              }
+            }}
+            onFocus={() => setIsHeroPaused(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                setIsHeroPaused(false);
+              }
+            }}
+          >
+            <HeroTrack $active={activeHeroSlide}>
+              {heroBusinesses.map((business, index) => {
+                const isActive = index === activeHeroSlide;
+                const title = t(`landing.${business.key}.title`);
 
-        <Section id="how-it-works" data-animate>
-          <Container>
-            <SectionHeader>
-              <h2>{t("how.heading")}</h2>
-              <p>{t("how.subheading")}</p>
-            </SectionHeader>
-            <Stepper data-animate>
-              <StepCard>
-                <StepNumber>1</StepNumber>
-                <h3>{t("how.step1.title")}</h3>
-                <p>{t("how.step1.text")}</p>
-              </StepCard>
-              <StepCard>
-                <StepNumber>2</StepNumber>
-                <h3>{t("how.step2.title")}</h3>
-                <p>{t("how.step2.text")}</p>
-              </StepCard>
-              <StepCard>
-                <StepNumber>3</StepNumber>
-                <h3>{t("how.step3.title")}</h3>
-                <p>{t("how.step3.text")}</p>
-              </StepCard>
-            </Stepper>
-          </Container>
-        </Section>
+                return (
+                  <HeroSlide
+                    key={business.key}
+                    aria-hidden={!isActive}
+                  >
+                    <HeroSlideInner>
+                      <HeroContent>
+                        <BusinessIdentity>
+                          <BusinessLogo src={business.logo} alt="" />
+                          <span>{title}</span>
+                        </BusinessIdentity>
+                        <HeroTitle>{t(`landing.${business.key}.heroTitle`)}</HeroTitle>
+                        <HeroCopy>{t(`landing.${business.key}.heroCopy`)}</HeroCopy>
+                        <HeroFeatureGrid>
+                          {business.features.map((feature) => {
+                            const FeatureIcon = feature.icon;
+                            return (
+                              <HeroFeatureCard key={feature.label}>
+                                <FeatureIcon size={27} strokeWidth={1.8} />
+                                <span>{t(`landing.${business.key}.${feature.label}`)}</span>
+                              </HeroFeatureCard>
+                            );
+                          })}
+                        </HeroFeatureGrid>
+                        <HeroActions>
+                          <HeroAction
+                            href="#company"
+                            tabIndex={isActive ? 0 : -1}
+                            onClick={() => trackClick(`${business.key}-hero-company`)}
+                          >
+                            {t("company.link")}
+                            <ChevronRight size={18} />
+                          </HeroAction>
+                          <HeroAction
+                            $secondary
+                            href="#contact"
+                            tabIndex={isActive ? 0 : -1}
+                            onClick={() => trackClick(`${business.key}-hero-contact`)}
+                          >
+                            <Phone size={17} />
+                            {t("footer.contact")}
+                          </HeroAction>
+                        </HeroActions>
+                      </HeroContent>
+                      <HeroVisual aria-hidden="true">
+                        <HeroIsometric src={business.logo} alt="" />
+                      </HeroVisual>
+                    </HeroSlideInner>
+                  </HeroSlide>
+                );
+              })}
+            </HeroTrack>
+
+            <CarouselControls>
+              <CarouselArrow
+                type="button"
+                aria-label="Previous business"
+                onClick={() =>
+                  setActiveHeroSlide(
+                    (current) => (current - 1 + heroBusinesses.length) % heroBusinesses.length
+                  )
+                }
+              >
+                <ChevronLeft size={20} />
+              </CarouselArrow>
+              <CarouselDots role="group" aria-label="Choose a Kaiten business">
+                {heroBusinesses.map((business, index) => (
+                  <CarouselDot
+                    key={business.key}
+                    type="button"
+                    $active={index === activeHeroSlide}
+                    aria-label={t(`landing.${business.key}.title`)}
+                    aria-current={index === activeHeroSlide ? "true" : undefined}
+                    onClick={() => {
+                      setActiveHeroSlide(index);
+                      trackClick(`${business.key}-hero-control`);
+                    }}
+                  />
+                ))}
+              </CarouselDots>
+              <CarouselArrow
+                type="button"
+                aria-label="Next business"
+                onClick={() =>
+                  setActiveHeroSlide((current) => (current + 1) % heroBusinesses.length)
+                }
+              >
+                <ChevronRight size={20} />
+              </CarouselArrow>
+            </CarouselControls>
+            <CarouselAnnouncement aria-live="polite">
+              {t(`landing.${heroBusinesses[activeHeroSlide].key}.title`)}
+            </CarouselAnnouncement>
+          </HeroCarousel>
+        </HeroSection>
 
         <Section data-animate>
           <Container>
@@ -453,7 +509,7 @@ export default function Page() {
             <div>
               <Brand>
                 <BrandLogo src="/KZLogo.png" alt="Kaiten" width={28} height={28} />
-                <BrandWordmark>Kaiten</BrandWordmark>
+                <BrandWordmark>{t("brand.name")}</BrandWordmark>
               </Brand>
               <FooterCopy>
                 {t("footer.copy")}
@@ -472,9 +528,15 @@ export default function Page() {
             <FooterLinks>
               <div>
                 <h4>{t("footer.products")}</h4>
-                <a href={ROUTES.mart}>{t("footer.products.mart")}</a>
-                <a href={ROUTES.living}>{t("footer.products.living")}</a>
-                <a href={ROUTES.homecare}>{t("footer.products.homecare")}</a>
+                <a href="#businesses" onClick={() => setActiveHeroSlide(0)}>
+                  {t("footer.products.mart")}
+                </a>
+                <a href="#businesses" onClick={() => setActiveHeroSlide(1)}>
+                  {t("footer.products.living")}
+                </a>
+                <a href="#businesses" onClick={() => setActiveHeroSlide(2)}>
+                  {t("footer.products.homecare")}
+                </a>
               </div>
               <div>
                 <h4>{t("footer.company")}</h4>
@@ -492,7 +554,7 @@ export default function Page() {
               </div>
               <div>
                 <h4>{t("footer.resources")}</h4>
-                <a href="#how-it-works">{t("footer.resources.how")}</a>
+                <a href="#contact">{t("footer.contact")}</a>
                 <a href="/press">{t("footer.resources.press")}</a>
               </div>
             </FooterLinks>
@@ -654,322 +716,431 @@ const TextLink = styled.a`
   }
 `;
 
-const LanguageSelectWrap = styled.label`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid ${({ theme }) => theme.colors.text};
+const LanguageMenu = styled.div`
+  position: relative;
+`;
+
+const LanguageButton = styled.button`
+  min-width: 148px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.outline};
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
-  padding: 6px 10px;
-  border-radius: 8px;
-  box-shadow: ${({ theme }) => theme.shadows.pixel};
-`;
-
-const LanguageSelect = styled.select`
-  border: none;
-  background: transparent;
-  color: inherit;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  outline: none;
-  cursor: pointer;
-`;
-
-const HeroSection = styled.section`
-  padding: 54px 0 40px;
-  opacity: 0;
-  transform: translateY(18px) translateX(12px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
-  scroll-snap-align: start;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
-    min-height: calc(100vh - 72px);
-    display: flex;
-    align-items: center;
-  }
-
-  &.is-visible {
-    opacity: 1;
-    transform: translateY(0) translateX(0);
-  }
-`;
-
-const HeroGrid = styled.div`
-  display: grid;
-  gap: 32px;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
-    grid-template-columns: 0.8fr 1.2fr;
-    align-items: center;
-  }
-`;
-
-const Eyebrow = styled.div`
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.muted};
-  margin-bottom: 8px;
-`;
-
-const HeroTitle = styled.h1`
-  font-size: clamp(1.85rem, 4vw, 3.2rem);
-`;
-
-const HeroCopy = styled.p`
-  color: ${({ theme }) => theme.colors.muted};
-  max-width: 420px;
-  font-size: 0.95rem;
-`;
-
-const HeroStack = styled.div`
-  position: relative;
-  width: min(620px, 100%);
-  height: auto;
-  margin: 0 0 0 auto;
+  box-shadow: 0 5px 16px rgba(12, 18, 36, 0.1);
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
 
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
-    height: 520px;
-    display: block;
-    gap: 0;
+  span {
+    flex: 1;
   }
 
-  a .hero-overlay {
-    opacity: 0.55;
+  svg:last-child {
+    transition: transform 0.2s ease;
   }
 
-  a .hero-corner {
-    opacity: 1;
-    transform: translateY(0);
+  &[aria-expanded="true"] svg:last-child {
+    transform: rotate(180deg);
   }
 
-  a[data-front=\"true\"] .hero-overlay {
-    opacity: 0;
-  }
+  @media (max-width: ${({ theme }) => theme.breakpoints.sm}) {
+    min-width: 50px;
 
-  a[data-front=\"true\"] .hero-corner {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  &:hover a .hero-overlay {
-    opacity: 0.55;
-  }
-
-  &:hover a .hero-corner {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  &:hover a:hover .hero-overlay {
-    opacity: 0;
-  }
-
-  &:hover a:hover .hero-corner {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
-    a .hero-overlay,
-    a .hero-corner {
-      opacity: 0;
-      transform: none;
+    span {
+      display: none;
     }
   }
 `;
 
-const HeroCardLink = styled.a<{ $offset: "front" | "mid" | "back" }>`
-  display: block;
-  width: 100%;
-  height: auto;
-  color: inherit;
-  transition: transform 0.3s ease, z-index 0s ease;
-  --offset-x: 0px;
-  --offset-y: 0px;
-  transform: translate(0, 0);
+const LanguagePopover = styled.div`
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 230px;
+  padding: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.outline};
+  border-radius: 16px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 18px 48px rgba(8, 13, 31, 0.22);
+  animation: language-menu-in 0.18s ease-out;
 
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: min(340px, 100%);
-    height: 470px;
-    transform: translate(var(--offset-x), var(--offset-y));
+  @keyframes language-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
-  ${({ $offset }) =>
-    $offset === "front" &&
-    css`
-      --offset-x: 0px;
-      --offset-y: 0px;
-      z-index: 3;
-    `}
+`;
 
-  ${({ $offset }) =>
-    $offset === "mid" &&
-    css`
-      --offset-x: 110px;
-      --offset-y: 0px;
-      z-index: 2;
-    `}
-
-  ${({ $offset }) =>
-    $offset === "back" &&
-    css`
-      --offset-x: 220px;
-      --offset-y: 0px;
-      z-index: 1;
-    `}
+const LanguageOption = styled.button<{ $active: boolean }>`
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: ${({ $active, theme }) =>
+    $active ? `${theme.colors.primary}18` : "transparent"};
+  color: ${({ theme }) => theme.colors.text};
+  display: grid;
+  grid-template-columns: 34px 1fr 18px;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
 
   &:hover {
-    z-index: 4;
-    transform: translate(var(--offset-x), calc(var(--offset-y) - 8px)) scale(1.02);
+    background: ${({ theme }) => `${theme.colors.primary}12`};
+  }
+
+  svg {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const LanguageCode = styled.span`
+  padding: 3px 5px;
+  border-radius: 6px;
+  background: ${({ theme }) => theme.colors.paper};
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+`;
+
+const HeroSection = styled.section`
+  position: relative;
+  height: calc(100svh - 70px);
+  min-height: 880px;
+  overflow: hidden;
+  scroll-snap-align: start;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
+    min-height: 650px;
+  }
+`;
+
+const HeroCarousel = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+`;
+
+const HeroTrack = styled.div<{ $active: number }>`
+  display: flex;
+  width: 300%;
+  height: 100%;
+  transform: translate3d(${({ $active }) => $active * -33.333333}%, 0, 0);
+  transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`;
+
+const HeroSlide = styled.article`
+  position: relative;
+  flex: 0 0 33.333333%;
+  width: 33.333333%;
+  height: 100%;
+  overflow: hidden;
+  --hero-accent: ${({ theme }) => theme.colors.primary};
+  --hero-soft: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  background: ${({ theme }) =>
+    theme.name === "dark"
+      ? "linear-gradient(120deg, #0f1630 0%, #121a33 60%, #1b274f 100%)"
+      : "linear-gradient(120deg, #ffffff 0%, #f8f9fc 60%, #e8ebf6 100%)"};
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  &::before {
+    width: min(55vw, 760px);
+    aspect-ratio: 1;
+    top: -45%;
+    right: -10%;
+    background: ${({ theme }) =>
+      theme.name === "dark" ? "rgba(122, 144, 230, 0.08)" : "rgba(255, 255, 255, 0.52)"};
+    filter: blur(2px);
+  }
+
+  &::after {
+    width: min(52vw, 780px);
+    height: 300px;
+    right: -8%;
+    bottom: -225px;
+    background: ${({ theme }) => theme.colors.primary};
+    opacity: ${({ theme }) => (theme.name === "dark" ? 0.16 : 0.72)};
+  }
+`;
+
+const HeroSlideInner = styled.div`
+  position: relative;
+  z-index: 1;
+  width: min(1200px, 100%);
+  height: 100%;
+  margin: 0 auto;
+  padding: 28px 20px 96px;
+  display: grid;
+  align-items: center;
+  align-content: center;
+  gap: 18px;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
+    grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+    gap: clamp(46px, 7vw, 100px);
+    padding: 48px 32px 100px;
+  }
+`;
+
+const HeroContent = styled.div`
+  max-width: 590px;
+`;
+
+const BusinessIdentity = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  margin-bottom: 20px;
+  color: var(--hero-accent);
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+
+  img {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    padding: 3px;
+    border-radius: 7px;
+    background: ${({ theme }) => theme.colors.surface};
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
+    margin-bottom: 24px;
+  }
+`;
+
+const BusinessLogo = styled.img``;
+
+const HeroTitle = styled.h1`
+  max-width: 680px;
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: clamp(2.3rem, 4.6vw, 4.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+`;
+
+const HeroCopy = styled.p`
+  max-width: 590px;
+  margin: 14px 0 0;
+  color: ${({ theme }) => theme.colors.muted};
+  font-size: clamp(1rem, 1.5vw, 1.16rem);
+  line-height: 1.65;
+`;
+
+const HeroFeatureGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 22px;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+`;
+
+const HeroFeatureCard = styled.div`
+  min-height: 98px;
+  padding: 14px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.outline};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.soft};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: var(--hero-accent);
+  text-align: center;
+
+  span {
+    color: ${({ theme }) => theme.colors.text};
+    font-size: 0.74rem;
+    font-weight: 750;
+    line-height: 1.3;
+  }
+`;
+
+const HeroActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+`;
+
+const HeroAction = styled.a<{ $secondary?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 17px;
+  border: 1px solid ${({ $secondary, theme }) =>
+    $secondary ? theme.colors.outline : theme.colors.primary};
+  border-radius: 10px;
+  background: ${({ $secondary, theme }) =>
+    $secondary ? theme.colors.surface : theme.colors.primary};
+  color: ${({ $secondary, theme }) =>
+    $secondary
+      ? theme.colors.text
+      : theme.name === "dark"
+        ? theme.colors.paper
+        : "#ffffff"};
+  box-shadow: ${({ $secondary }) => ($secondary ? "none" : "0 8px 20px rgba(31, 27, 74, 0.2)")};
+  font-weight: 750;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(31, 27, 74, 0.2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--hero-accent);
+    outline-offset: 4px;
+  }
+`;
+
+const HeroVisual = styled.div`
+  position: relative;
+  align-self: center;
+  width: 100%;
+  min-width: 0;
+  transform: rotate(1.5deg);
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
+    max-width: 620px;
+    margin: 0 auto;
+  }
+`;
+
+const HeroIsometric = styled.img`
+  position: relative;
+  display: block;
+  width: min(52vw, 250px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(16px 20px 0 color-mix(in srgb, var(--hero-accent) 24%, transparent))
+    drop-shadow(0 28px 42px rgba(24, 29, 58, 0.2));
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
+    width: min(100%, 560px);
+  }
+`;
+
+const CarouselControls = styled.div`
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 8px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.outline};
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.soft};
+  backdrop-filter: blur(12px);
+`;
+
+const CarouselDots = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 9px;
+`;
+
+const CarouselArrow = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid ${({ theme }) => theme.colors.outline};
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.paper};
   }
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.primary};
-    outline-offset: 6px;
-  }
-
-  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
-    &:hover {
-      transform: none;
-    }
+    outline-offset: 3px;
   }
 `;
 
-const HeroCard = styled.div`
-  position: relative;
-  border-radius: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.text};
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.pixel};
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
-    position: absolute;
-    inset: 0;
-  }
-`;
-
-const HeroCardOverlay = styled.div`
-  position: absolute;
-  inset: 0;
-  background: rgba(12, 18, 36, 0.62);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  z-index: 3;
-  pointer-events: none;
-`;
-
-const HeroCardCorner = styled.div`
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 40px;
-  height: 48px;
-  border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.colors.outline};
-  background: ${({ theme }) => theme.colors.surface};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 4px;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 4;
-  pointer-events: none;
-`;
-
-const HeroCornerLogo = styled.img`
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-`;
-
-const HeroCardPreview = styled.div`
-  position: relative;
-  height: 230px;
-  background: ${({ theme }) => theme.colors.primaryDark};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.outline};
-`;
-
-const HeroCardImage = styled.img`
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-`;
-
-const HeroCardBody = styled.div`
-  padding: 16px 18px 18px;
-  background: ${({ theme }) => theme.colors.paper};
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-`;
-
-const HeroCardTitle = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-weight: 700;
-  margin-bottom: 8px;
-`;
-
-const HeroCardPill = styled.span`
+const CarouselDot = styled.button<{ $active: boolean }>`
+  width: ${({ $active }) => ($active ? "28px" : "9px")};
+  height: 9px;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  border: 1px solid ${({ theme }) => theme.colors.outline};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-`;
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.primary : theme.colors.outline};
+  cursor: pointer;
+  transition: width 0.25s ease, background 0.25s ease;
 
-const HeroCardText = styled.p`
-  color: ${({ theme }) => theme.colors.muted};
-  margin: 0;
-  font-size: 0.9rem;
-`;
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary};
+    outline-offset: 4px;
+  }
 
-const HeroCardList = styled.ul`
-  margin: 0;
-  padding-left: 16px;
-  color: ${({ theme }) => theme.colors.muted};
-
-  li {
-    margin-bottom: 4px;
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `;
 
-const HeroCardChips = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-
-  span {
-    border-radius: 999px;
-    padding: 3px 8px;
-    font-size: 0.65rem;
-    font-weight: 600;
-    border: 1px solid ${({ theme }) => theme.colors.outline};
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.text};
-  }
+const CarouselAnnouncement = styled.span`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 `;
 
 const SectionHeader = styled.div`
@@ -1057,60 +1228,6 @@ const ChipRow = styled.div`
   gap: 10px;
   margin: 16px 0 20px;
 `;
-
-const Stepper = styled.div`
-  display: grid;
-  gap: 20px;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  &[data-animate] > * {
-    opacity: 0;
-    transform: translateY(14px) translateX(12px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-  }
-
-  &[data-animate].is-visible > * {
-    opacity: 1;
-    transform: translateY(0) translateX(0);
-  }
-
-  &[data-animate].is-visible > *:nth-child(1) {
-    transition-delay: 0.05s;
-  }
-  &[data-animate].is-visible > *:nth-child(2) {
-    transition-delay: 0.12s;
-  }
-  &[data-animate].is-visible > *:nth-child(3) {
-    transition-delay: 0.2s;
-  }
-`;
-
-const StepCard = styled.div`
-  padding: 24px;
-  border-radius: 14px;
-  border: 1px solid ${({ theme }) => theme.colors.text};
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.pixel};
-`;
-
-const StepNumber = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) =>
-    theme.name === "dark" ? theme.colors.primaryDark : theme.colors.surface};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  margin-bottom: 12px;
-`;
-
-
 
 const TrustStrip = styled.div`
   display: grid;

@@ -16,9 +16,9 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Kaiten",
+  title: "Japan Kaiten",
   description:
-    "Kaiten connects you to second-hand shopping, rental listings, and trusted home services.",
+    "Japan Kaiten connects you to second-hand shopping, rental listings, and trusted home services.",
   metadataBase: new URL("https://kaiten.com"),
   icons: {
     icon: [
@@ -29,11 +29,11 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "Kaiten",
+    title: "Japan Kaiten",
     description:
-      "Kaiten connects you to second-hand shopping, rental listings, and trusted home services.",
+      "Japan Kaiten connects you to second-hand shopping, rental listings, and trusted home services.",
     url: "https://kaiten.com",
-    siteName: "Kaiten",
+    siteName: "Japan Kaiten",
     type: "website"
   }
 };
